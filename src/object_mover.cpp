@@ -4,9 +4,7 @@
 // 3 - obj y
 // 4 - obj z
 // 5 - maximum displacement
-// 6 - speed_x
-// 7 - speed_y
-// 8 - speed_z
+// 6 - speed_average
 // 9 - node loop rate
 // 
 
@@ -18,14 +16,13 @@
 #include <ctime>
 #include <stdlib.h>
 #include <string>
-#include <ctime>
-#include <stdlib.h>
+#include <thread>
 
 geometry_msgs::Point obstacle_coords; // GLOBAL_VAR
 geometry_msgs::Point origin; // GLOBAL_VAR
 std::string model_name; // GLOBAL_VAR
 geometry_msgs::Point frame_displacement; // GLOBAL_VAR
-float maximum_displacement = 0; // GLOBAL_VAR
+float maximum_displacement = 0; // GLOBAL_VAR - заменить переменную
 double speed_x = 0.0; // GLOBAL_VAR
 double speed_y = 0.0; // GLOBAL_VAR
 double speed_z = 0.0; // GLOBAL_VAR
@@ -217,7 +214,21 @@ void logic()
 
 int main(int argc, char **argv)
 {
+    // auto time0 = std::chrono::system_clock::now();
+    // std::this_thread::sleep_for(std::chrono::milliseconds(int(rand() / RAND_MAX * 1000)));
+    // std::chrono::duration<float> now = std::chrono::system_clock::now() - time0;
+    
+    // srand(now.count());
+
     srand(time(0));
+    float rand1 = float(rand()) / RAND_MAX;
+    std::this_thread::sleep_for(std::chrono::milliseconds(500));
+    srand(time(0));
+    float rand2 = float(rand()) / RAND_MAX;
+    std::this_thread::sleep_for(std::chrono::milliseconds(500));
+    srand(time(0));
+    float rand3 = float(rand()) / RAND_MAX;
+
     ros::init(argc, argv, "gazebo_model_state_node_" + std::to_string(rand()));
 
     int node_loop_rate = 0; // ???
@@ -242,12 +253,15 @@ int main(int argc, char **argv)
     maximum_displacement = atof(argv[5]);
 
     // By-axis speed setter
-    speed_x = atof(argv[6]);
-    speed_y = atof(argv[7]);
-    speed_z = atof(argv[8]);
+    speed_x = atof(argv[6]) * 1.25 - rand1 * 0.5 * atof(argv[6]);
+    speed_y = atof(argv[6]) * 1.25 - rand2 * 0.5 * atof(argv[6]);
+    speed_z = 0;
+
+    ROS_INFO_STREAM("Speed x = " << speed_x << "\nspeed y = " << speed_y << "\n");
+    ROS_INFO_STREAM("rand1 = " << rand1 << "\nrand2 = " << rand2 << "\n");
 
     // Node loop rate setter. Influences the smoothness of object movement
-    node_loop_rate = atof(argv[9]);
+    node_loop_rate = atof(argv[7]);
 
     ros::Rate loop_rate(node_loop_rate);
 
