@@ -5,7 +5,7 @@
 // 4 - obj z
 // 5 - maximum displacement
 // 6 - speed_average
-// 9 - node loop rate
+// 7 - node loop rate
 // 
 
 #include "ros/ros.h"
@@ -17,6 +17,7 @@
 #include <stdlib.h>
 #include <string>
 #include <thread>
+#include <random>
 
 geometry_msgs::Point obstacle_coords; // GLOBAL_VAR
 geometry_msgs::Point origin; // GLOBAL_VAR
@@ -29,6 +30,11 @@ double speed_z = 0.0; // GLOBAL_VAR
 ros::ServiceClient client; // GLOBAL_VAR
 std::vector<double_t> time_buffer; // GLOBAL_VAR
 
+float float_abs(float num)
+{
+    if (num < 0) num = -num;
+    return num;
+}
 
 /**
 * @brief Initializes time buffer
@@ -192,22 +198,24 @@ void logic()
 
     bool success_of_the_call = 0;
 
-    
-    if (client.call(model_state_srv))
+    for (int i = 0; i < 6; ++i)
     {
-        success_of_the_call = model_state_srv.response.success;
-        if (success_of_the_call)
+        if (client.call(model_state_srv))
         {
-            ROS_INFO_STREAM("Successfully called service" << model_state_srv.response.status_message); 
+            success_of_the_call = model_state_srv.response.success;
+            if (success_of_the_call)
+            {
+                // ROS_INFO_STREAM("Successfully called service" << model_state_srv.response.status_message); 
+            }
+            else
+            {
+                ROS_ERROR_STREAM("the call was successful but the model state was not set ---> " << model_state_srv.response.status_message);
+            }
         }
         else
         {
-            ROS_ERROR_STREAM("the call was successful but the model state was not set ---> " << model_state_srv.response.status_message);
+            ROS_ERROR_STREAM("Failed to call service");
         }
-    }
-    else
-    {
-        ROS_ERROR_STREAM("Failed to call service");
     }
 }
 
@@ -218,16 +226,20 @@ int main(int argc, char **argv)
     // std::this_thread::sleep_for(std::chrono::milliseconds(int(rand() / RAND_MAX * 1000)));
     // std::chrono::duration<float> now = std::chrono::system_clock::now() - time0;
     
-    // srand(now.count());
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_real_distribution<> distr(0.0f, 1.0f);
 
-    srand(time(0));
-    float rand1 = float(rand()) / RAND_MAX;
+    // srand(time(NULL));
+    float rand1 = distr(gen);
     std::this_thread::sleep_for(std::chrono::milliseconds(500));
-    srand(time(0));
-    float rand2 = float(rand()) / RAND_MAX;
+    // srand(time(NULL));
+    float rand2 = distr(gen);
     std::this_thread::sleep_for(std::chrono::milliseconds(500));
-    srand(time(0));
-    float rand3 = float(rand()) / RAND_MAX;
+    // srand(time(NULL));
+    float rand3 = distr(gen);
+    float rand_sig = (rand3 - 0.5) / float_abs(rand3 - 0.5);
+    float rand_sig2 = rand3 / float_abs(rand3);
 
     ros::init(argc, argv, "gazebo_model_state_node_" + std::to_string(rand()));
 
@@ -253,12 +265,12 @@ int main(int argc, char **argv)
     maximum_displacement = atof(argv[5]);
 
     // By-axis speed setter
-    speed_x = atof(argv[6]) * 1.25 - rand1 * 0.5 * atof(argv[6]);
-    speed_y = atof(argv[6]) * 1.25 - rand2 * 0.5 * atof(argv[6]);
+    speed_x = rand_sig * (atof(argv[6]) * 1.5 - rand1 * atof(argv[6]));
+    speed_y = rand_sig2 * (atof(argv[6]) * 1.5 - rand2 * atof(argv[6]));
     speed_z = 0;
 
     ROS_INFO_STREAM("Speed x = " << speed_x << "\nspeed y = " << speed_y << "\n");
-    ROS_INFO_STREAM("rand1 = " << rand1 << "\nrand2 = " << rand2 << "\n");
+    ROS_INFO_STREAM("\nrand1 = " << rand1 << "\nrand2 = " << rand2 << "\nrand3 = " << rand3 << "\nrand_sig = " << rand_sig << "\nrand_sig2 = " << rand_sig2 << "\n");
 
     // Node loop rate setter. Influences the smoothness of object movement
     node_loop_rate = atof(argv[7]);
